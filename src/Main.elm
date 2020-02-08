@@ -1,63 +1,114 @@
-module Main exposing (main)
--- Press a button to generate a random number between 1 and 6.
---
--- Read how it works:
---   https://guide.elm-lang.org/effects/random.html
---
+module Main exposing (Model, Msg(..), init, main, subscriptions, update, view, viewLink)
 
 import Browser
+import Browser.Navigation as Nav
 import Card
 import Html exposing (..)
-import Html.Events exposing (..)
+import Html.Attributes exposing (..)
 import Random
+import Url
+
+
 
 -- MAIN
+
+
+main : Program () Model Msg
 main =
-  Browser.element
-    { init = init
-    , update = update
-    , subscriptions = subscriptions
-    , view = view
-    }
+    Browser.application
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = subscriptions
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
+        }
+
+
 
 -- MODEL
-type alias Model =
-  { dieFace : Int
-  }
 
-init : () -> (Model, Cmd Msg)
-init _ =
-  ( Model 1
-  , Cmd.none
-  )
+
+type alias Model =
+    { key : Nav.Key
+    , url : Url.Url
+    , cards : List Int
+    }
+
+
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
+    ( Model key url [], Cmd.none )
+
+
 
 -- UPDATE
+
+
 type Msg
-  = Roll
-  | NewFace Int
+    = LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
+    | Draw
+    | NewCard Int
 
-update : Msg -> Model -> (Model, Cmd Msg)
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-  case msg of
-    Roll ->
-      ( model
-      , Random.generate NewFace (Random.int 1 6)
-      )
+    case msg of
+        Draw ->
+            ( model
+            , Random.generate NewCard (Random.int 1 156)
+            )
 
-    NewFace newFace ->
-      ( Model newFace
-      , Cmd.none
-      )
+        NewCard id ->
+            ( { model | cards = model.cards ++ [ id ] }
+            , Cmd.none
+            )
+
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        UrlChanged url ->
+            ( { model | url = url }
+            , Cmd.none
+            )
+
+
 
 -- SUBSCRIPTIONS
+
+
 subscriptions : Model -> Sub Msg
-subscriptions model =
-  Sub.none
+subscriptions _ =
+    Sub.none
+
+
 
 -- VIEW
-view : Model -> Html Msg
+
+
+view : Model -> Browser.Document Msg
 view model =
-  div []
-    [ h1 [] [ text (String.fromInt model.dieFace) ]
-    , button [ onClick Roll ] [ text "Roll" ]
-    ]
+    { title = "Tarot"
+    , body =
+        [ text "The current URL is: "
+        , b [] [ text (Url.toString model.url) ]
+        , ul []
+            [ viewLink "/home"
+            , viewLink "/profile"
+            , viewLink "/reviews/the-century-of-the-self"
+            , viewLink "/reviews/public-opinion"
+            , viewLink "/reviews/shah-of-shahs"
+            ]
+        ]
+    }
+
+
+viewLink : String -> Html msg
+viewLink path =
+    li [] [ a [ href path ] [ text path ] ]
