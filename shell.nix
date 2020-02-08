@@ -4,13 +4,10 @@ let
   elm2nix = (import sources.elm2nix { });
 in
 with pkgs;
-with elmPackages;
 pkgs.mkShell {
   buildInputs = [
-    elm
-    elm-format
+    pkgs.elmPackages.elm
+    pkgs.elmPackages.elm-format
     elm2nix
-    nix
-    cacert
   ];
 }
